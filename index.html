@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style type="text/css">
+      html{
+        height: 100%;
+        font:400 14px / 1.618 ArialMT,"Hiragino Kaku Gothic ProN","ヒラギノ角ゴ ProN W3","Hiragino Kaku Gothic Pro W3","ヒラギノ角ゴ Pro W3","メイリオ","ＭＳ Ｐゴシック","Osaka" ;
+      }
+      body {
+        margin: 0 ;
+        padding: 0 ;
+        height: 100% ;
+        background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%),
+        linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%);
+        background-size:20px 20px;
+        background-position: 0 0, 10px 10px;
+      }
+      .output {
+        position: fixed ;
+        top: 50% ;
+        left: 50% ;
+        margin: -39px 0 0 -101px ;
+        width: 200px ;
+        line-height: 60px ;
+        height: 60px ;
+        color: #333 ;
+        text-align: center ;
+        padding: 8px 0 ;
+        border: 1px solid #333 ;
+        background: #fff ;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="output" class="output">X: <span id="x">0</span>px / Y: <span id="y">0</span>px</p>
+    <script>
+    ws = new WebSocket("ws://" + location.hostname + ":8000");
+    ws.onopen = function() {
+      var data = {
+        event: 'connected',
+        width: window.innerWidth,
+        height: window.innerHeight
+      }
+      ws.send(JSON.stringify(data));
+    };
+    ws.onclose = function() {
+      ws.send(JSON.stringify({event: 'connected'}));
+    };
+    ws.onmessage = function(e) {
+      console.log(e.data);
+    };
+    var getMousePosition = function(e) {
+      e.preventDefault();
+      if('ontouchend' in document){
+        if(!e.touches.length) return;
+        var mouseX = e.touches[0].pageX;
+        var mouseY = e.touches[0].pageY;
+      }
+      else if(flag===0) return;
+      else{
+        var mouseX = e.pageX;
+        var mouseY = e.pageY;
+      }
+      var result = {x: mouseX, y: mouseY};
+      console.log(Math.floor(mouseX), Math.floor(mouseY));
+      return result;
+    };
+
+    var mousemoveEvent = function(e) {
+      e.preventDefault();
+      var position = getMousePosition(e);
+      if(!position) return;
+      xElement.textContent = Math.floor(position.x);
+      yElement.textContent = Math.floor(position.y);
+      position["event"] = "mousemove";
+      ws.send(JSON.stringify(position));
+    };
+    var mousedownEvent = function(e){
+      flag = 1;
+      e.preventDefault();
+      console.log("mousedownEvent");
+      var position = getMousePosition(e);
+      if(!position) return;
+      xElement.textContent = Math.floor(position.x);
+      yElement.textContent = Math.floor(position.y);
+      position["event"] = "mousedown";
+      ws.send(JSON.stringify(position));
+    };
+    var mouseupEvent = function(e){
+      flag = 0;
+      console.log("mouseupEvent");
+      ws.send(JSON.stringify({event: "mouseup"}));
+    };
+
+    var addEventListenerMulti = function(events, func){
+      events.split(" ").forEach(function(e){
+        document.body.addEventListener(e, func);
+      });
+    }
+    addEventListenerMulti("mousemove touchmove", mousemoveEvent);
+    addEventListenerMulti("mousedown touchstart", mousedownEvent);
+    addEventListenerMulti("mouseup touchend", mouseupEvent);
+
+    var flag = 0;
+    var xElement = document.getElementById("x");
+    var yElement = document.getElementById("y");
+  </script>
+</body>
+</html>
